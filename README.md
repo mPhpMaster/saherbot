@@ -1,12 +1,18 @@
 # SaherBot telegram python
 Custom Bot telegram.
 
-#packages you need to install
 
-$ pip install pyTelegramBotAPI
+## Requirements
 
-$ pip install python-decouple
-[SaherUser@Bot.md](..%2FSaherUser%40Bot.md)
+* python
+* pip
+* pyTelegramBotAPI
+* python-decouple
+
+## Installation
+* pip install pyTelegramBotAPI
+* pip install python-decouple
+* [Download](https://github.com/mPhpMaster/saherbot/zipball/master)
 
 ## How To:
 1. Copy `.env.example` to `.env`.
@@ -20,3 +26,12 @@ $ pip install python-decouple
 ```shell
 python main.py
 ```
+
+***
+
+## Copyright and license
+
+Copyright © 2023 hlaCk (https://github.com/mPhpMaster)
+
+Licensed under the **MIT License** (https://github.com/mPhpMaster/saherbot/blob/master/LICENSE) license.
+
