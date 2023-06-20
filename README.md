@@ -4,15 +4,21 @@ Custom Bot telegram.
 
 ## Requirements
 
-* python
+* [python](https://www.python.org/downloads/)
 * pip
 * pyTelegramBotAPI
 * python-decouple
 
 ## Installation
-* pip install pyTelegramBotAPI
-* pip install python-decouple
-* [Download](https://github.com/mPhpMaster/saherbot/zipball/master)
+1. [Download](https://github.com/mPhpMaster/saherbot/zipball/master)
+2. Run:
+```shell
+pip install pyTelegramBotAPI
+```
+3. Run:
+```shell
+pip install python-decouple
+```
 
 ## How To:
 1. Copy `.env.example` to `.env`.
