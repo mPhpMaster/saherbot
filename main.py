@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-# main commands and bot creation
-
+import logging
 import telebot
 from decouple import config
 import re
 import datetime
 import glob
 import os
+from logger import log
 
 LAST_ACTIVITY = datetime.datetime.now().timestamp()
 botName = "SaherBot"
@@ -14,7 +14,16 @@ BOT_TOKEN = config('BOT_TOKEN')
 MSG_LENGTH = config('MSG_LENGTH')
 CHAT_ID = config('CHAT_ID')
 NOTIFY_RUN = config('NOTIFY_RUN')
+ECHO_COMMAND = config('ECHO_COMMAND')
 ALLOWED_TYPES = ['audio', 'photo', 'voice', 'video', 'text']
+
+if len(BOT_TOKEN) == 0:
+    log("MISSING: BOT_TOKEN", "error")
+    exit()
+
+if len(CHAT_ID) == 0:
+    log("MISSING: CHAT_ID", "error")
+    exit()
 
 bot = telebot.TeleBot(BOT_TOKEN)
 LIST={}
@@ -25,6 +34,8 @@ for f in glob.glob("list/*"):
     if LIST[ _name ][0] == "-":
         LIST[_name] = LIST[ os.path.basename(f) ][2:]
     _f.close()
+
+log(str(len(LIST.items())) + " List/Lists Read Done")
 
 def is_admin(user: int):
     for u in bot.get_chat_administrators(CHAT_ID):
@@ -47,16 +58,19 @@ def welcome_message(id=CHAT_ID):
 
 @bot.message_handler(commands=["id"])
 def chat_id(message):
+    log("Command id from "+ message.from_user.username)
     if is_admin(message.from_user.id):
         bot.send_message(message.from_user.id, f"<code>CHAT_ID={message.chat.id}</code>", parse_mode="HTML")
 
 @bot.message_handler(commands=["ping"])
 def welcome(message):
+    log("Command ping from "+ message.from_user.username)
     welcome_message(message.chat.id)
 
 @bot.message_handler(commands=["help"])
 def show_codes(message):
     global LIST
+    log("Command help from "+ message.from_user.username)
     msg="\n"
     for v in LIST:
         msg += f"{v}\n"
@@ -71,10 +85,12 @@ def default_command(message):
     global LAST_ACTIVITY
     # skip private
     if message.chat.type == 'private':
+        log("Private message from "+ message.from_user.username + ": " + message.text)
         return
 
     # skip old messages
     if message.date and datetime.datetime.now().timestamp() > (message.date + 2):
+        log("Old Message from "+ message.from_user.username + ": " + message.text)
         return
 
     # skip duplicate
@@ -85,6 +101,7 @@ def default_command(message):
     _is_admin = is_admin(message.from_user.id)
     # check message length
     if not _is_admin and len(message.text) > int(MSG_LENGTH):
+        log("Delete Message Bad Length by "+ message.from_user.username + ": " + message.text)
         return delete_with_mention(message.chat.id, message.id, message.from_user.first_name, message.from_user.id, "الرجاء اختصار الرسالة")
 
     isURL = re.match(re.compile(
@@ -96,14 +113,17 @@ def default_command(message):
         r'(?:/?|[/?]\S+)$', re.IGNORECASE), message.text) is not None
 
     if not _is_admin and (not (message.content_type in ALLOWED_TYPES and not isURL)):
+        log("Delete Message Bad Type by "+ message.from_user.username + ": " + message.text)
         return delete_with_mention(message.chat.id, message.id, message.from_user.first_name, message.from_user.id, " غير مسموح لك بارسال هذه الرسالة !")
 
     if message.content_type == 'text' and not isURL:
         for key, val in LIST.items():
             if key.lower() == message.text.lower():
+                log(f"List {key} by: " + message.from_user.username)
                 return bot.reply_to(message, val)
 
-        # return bot.send_message(message.chat.id, "C: " + message.text)
+        if str(ECHO_COMMAND) == "1":
+            bot.send_message(message.chat.id, "C: " + message.text)
 
 
 @bot.message_handler(content_types=[
@@ -111,13 +131,20 @@ def default_command(message):
     "left_chat_member"
 ])
 def new_left_chat_members(message):
+    log("Delete Message new_chat_members/left_chat_member by "+ message.from_user.username)
     bot.delete_message(message.chat.id,message.id)
     if not is_admin(message.from_user.id) and message.content_type == "new_chat_members":
         for member in message.new_chat_members:
             if member.is_bot == True:
+                log("Ban Member bot: "+ member.username)
                 bot.ban_chat_member(message.chat.id,member.id)
 
 if int(NOTIFY_RUN) == 1:
     welcome_message(CHAT_ID)
 
+log(botName + " Running!")
+log("Ctrl+C to close it.")
 bot.polling()
+
+log("Exit!")
+bot.stop_polling()
