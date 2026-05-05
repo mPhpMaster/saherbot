@@ -67,11 +67,32 @@ def load_lists():
     logger.log(str(list_len) + " List/Lists Read Done")
     return list_len
 
-def is_admin(user: int):
-    for u in bot.get_chat_administrators(loader.CHAT_ID):
-        if u.user.id == user:
-            return True
+def is_monitored_group(chat_id):
+    """If MONITORED_CHAT_IDS is set in .env, only those groups are moderated; otherwise all groups."""
+    if not loader.MONITORED_CHAT_IDS:
+        return True
+    try:
+        return int(chat_id) in loader.MONITORED_CHAT_IDS
+    except (TypeError, ValueError):
+        return False
 
+
+def chat_for_admin_lookup(message):
+    """Use the current group for admin checks; in private, use CHAT_ID from .env."""
+    t = getattr(message.chat, "type", None)
+    if t in ("group", "supergroup"):
+        return message.chat.id
+    return loader.CHAT_ID
+
+
+def is_admin(user_id: int, chat_id=None):
+    cid = loader.CHAT_ID if chat_id is None else chat_id
+    try:
+        for u in bot.get_chat_administrators(cid):
+            if u.user.id == user_id:
+                return True
+    except Exception as e:
+        logger.log("get_chat_administrators failed: " + str(e), "error")
     return False
 
 def echo_command(message):
@@ -92,7 +113,7 @@ def is_old_message(message):
 
 def record_strike_after_moderation_delete(chat_id: int, user_id: int, user_name: str):
     """بعد حذف رسالة مخالفة: العدّ نحو الحظر عند STRIKES_TO_BAN ضمن STRIKE_WINDOW_SEC."""
-    if is_admin(user_id):
+    if is_admin(user_id, chat_id):
         return
     key = (chat_id, user_id)
     t = now()
@@ -101,7 +122,7 @@ def record_strike_after_moderation_delete(chat_id: int, user_id: int, user_name:
     prev = [x for x in prev if x >= cutoff]
     prev.append(t)
     if len(prev) >= STRIKES_TO_BAN:
-        if is_admin(user_id):
+        if is_admin(user_id, chat_id):
             _moderation_strikes.pop(key, None)
             return
         try:

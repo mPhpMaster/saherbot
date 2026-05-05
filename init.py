@@ -9,7 +9,9 @@ import helpers
 @bot.message_handler(commands=["id"])
 def get_chat_id(message):
     log("Command id from " + helpers.user_display(message.from_user))
-    if helpers.is_admin(message.from_user.id):
+    if not helpers.is_private(message) and not helpers.is_monitored_group(message.chat.id):
+        return
+    if helpers.is_admin(message.from_user.id, helpers.chat_for_admin_lookup(message)):
         bot.delete_message(message.chat.id, message.id)
         bot.send_message(message.from_user.id, f"<code>CHAT_ID={message.chat.id}</code>", parse_mode="HTML")
     return
@@ -18,7 +20,9 @@ def get_chat_id(message):
 @bot.message_handler(commands=["reload"])
 def reload_lists(message):
     logger.log("Command reload from " + helpers.user_display(message.from_user))
-    if helpers.is_admin(message.from_user.id):
+    if not helpers.is_private(message) and not helpers.is_monitored_group(message.chat.id):
+        return
+    if helpers.is_admin(message.from_user.id, helpers.chat_for_admin_lookup(message)):
         bot.delete_message(message.chat.id, message.id)
         bot.send_message(message.from_user.id, f"{helpers.load_lists()} List loaded.")
     return
@@ -27,6 +31,8 @@ def reload_lists(message):
 @bot.message_handler(commands=["ping"])
 def ping(message):
     logger.log("Command ping from " + helpers.user_display(message.from_user))
+    if not helpers.is_private(message) and not helpers.is_monitored_group(message.chat.id):
+        return
     helpers.welcome_message(message.chat.id)
     return
 
@@ -34,6 +40,8 @@ def ping(message):
 @bot.message_handler(commands=["help"])
 def show_codes(message):
     logger.log("Command help from " + helpers.user_display(message.from_user))
+    if not helpers.is_private(message) and not helpers.is_monitored_group(message.chat.id):
+        return
     msg = "\n"
     for v in loader.LIST:
         msg += f"{v}\n"
@@ -55,7 +63,10 @@ def default_command(message):
         logger.log("Old Message from " + helpers.user_display(message.from_user) + ": " + (message.text or ""))
         return
 
-    _is_not_admin = helpers.is_admin(message.from_user.id) == False
+    if not helpers.is_monitored_group(message.chat.id):
+        return
+
+    _is_not_admin = helpers.is_admin(message.from_user.id, message.chat.id) == False
     # check message length
     if _is_not_admin and helpers.check_message_len(message):
         logger.log("Delete Message Bad Length by " + helpers.user_display(message.from_user) + ": " + (message.text or ""))
@@ -99,8 +110,10 @@ def default_command(message):
 ])
 def new_left_chat_members(message):
     logger.log("Delete Message new_chat_members/left_chat_member by " + helpers.user_display(message.from_user))
+    if not helpers.is_monitored_group(message.chat.id):
+        return
     bot.delete_message(message.chat.id, message.id)
-    if not helpers.is_admin(message.from_user.id) and message.content_type == "new_chat_members":
+    if not helpers.is_admin(message.from_user.id, message.chat.id) and message.content_type == "new_chat_members":
         for member in message.new_chat_members:
             if member.is_bot == True:
                 logger.log("Ban Member bot: " + helpers.user_display(member))
