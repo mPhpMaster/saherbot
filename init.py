@@ -8,7 +8,7 @@ import helpers
 
 @bot.message_handler(commands=["id"])
 def get_chat_id(message):
-    log("Command id from " + message.from_user.username)
+    log("Command id from " + helpers.user_display(message.from_user))
     if helpers.is_admin(message.from_user.id):
         bot.delete_message(message.chat.id, message.id)
         bot.send_message(message.from_user.id, f"<code>CHAT_ID={message.chat.id}</code>", parse_mode="HTML")
@@ -17,7 +17,7 @@ def get_chat_id(message):
 
 @bot.message_handler(commands=["reload"])
 def reload_lists(message):
-    logger.log("Command reload from " + message.from_user.username)
+    logger.log("Command reload from " + helpers.user_display(message.from_user))
     if helpers.is_admin(message.from_user.id):
         bot.delete_message(message.chat.id, message.id)
         bot.send_message(message.from_user.id, f"{helpers.load_lists()} List loaded.")
@@ -26,14 +26,14 @@ def reload_lists(message):
 
 @bot.message_handler(commands=["ping"])
 def ping(message):
-    logger.log("Command ping from " + message.from_user.username)
+    logger.log("Command ping from " + helpers.user_display(message.from_user))
     helpers.welcome_message(message.chat.id)
     return
 
 
 @bot.message_handler(commands=["help"])
 def show_codes(message):
-    logger.log("Command help from " + message.from_user.username)
+    logger.log("Command help from " + helpers.user_display(message.from_user))
     msg = "\n"
     for v in loader.LIST:
         msg += f"{v}\n"
@@ -47,23 +47,39 @@ def show_codes(message):
 def default_command(message):
     # skip private
     if helpers.is_private(message):
-        logger.log("Private message from " + message.from_user.username + ": " + message.text)
+        logger.log("Private message from " + helpers.user_display(message.from_user) + ": " + (message.text or ""))
         return
 
     # skip old messages
     if helpers.is_old_message(message):
-        logger.log("Old Message from " + message.from_user.username + ": " + message.text)
+        logger.log("Old Message from " + helpers.user_display(message.from_user) + ": " + (message.text or ""))
         return
 
     _is_not_admin = helpers.is_admin(message.from_user.id) == False
     # check message length
     if _is_not_admin and helpers.check_message_len(message):
-        logger.log("Delete Message Bad Length by " + message.from_user.username + ": " + message.text)
-        return helpers.delete_with_mention(message.chat.id, message.id, message.from_user.first_name, message.from_user.id, "الرجاء اختصار الرسالة")
+        logger.log("Delete Message Bad Length by " + helpers.user_display(message.from_user) + ": " + (message.text or ""))
+        return helpers.delete_with_mention(message.chat.id, message.id, message.from_user.first_name or "", message.from_user.id, "الرجاء اختصار الرسالة")
 
     if _is_not_admin and helpers.is_type_denied(message):
-        logger.log("Delete Message Bad Type by " + message.from_user.username + ": " + message.text)
-        return helpers.delete_with_mention(message.chat.id, message.id, message.from_user.first_name, message.from_user.id, " غير مسموح لك بارسال هذه الرسالة !")
+        logger.log("Delete Message Bad Type by " + helpers.user_display(message.from_user) + ": " + (message.text or ""))
+        return helpers.delete_with_mention(message.chat.id, message.id, message.from_user.first_name or "", message.from_user.id, " غير مسموح لك بارسال هذه الرسالة !" + helpers.MODERATION_KICK_WARNING_SUFFIX)
+
+    if _is_not_admin and helpers.message_has_forbidden_sharing(message):
+        logger.log(
+            "Delete Message forbidden sharing by "
+            + helpers.user_display(message.from_user)
+            + ": "
+            + (helpers.get_message_plaintext(message) or "")
+        )
+        return helpers.delete_with_mention(
+            message.chat.id,
+            message.id,
+            message.from_user.first_name or "",
+            message.from_user.id,
+            "غير مسموح بمشاركة أرقام الجوال أو الروابط أو أسماء المستخدمين."
+            + helpers.MODERATION_KICK_WARNING_SUFFIX,
+        )
 
     if helpers.is_text(message):
         val = helpers.get_list(message)
@@ -82,12 +98,12 @@ def default_command(message):
     "left_chat_member"
 ])
 def new_left_chat_members(message):
-    logger.log("Delete Message new_chat_members/left_chat_member by " + message.from_user.username)
+    logger.log("Delete Message new_chat_members/left_chat_member by " + helpers.user_display(message.from_user))
     bot.delete_message(message.chat.id, message.id)
     if not helpers.is_admin(message.from_user.id) and message.content_type == "new_chat_members":
         for member in message.new_chat_members:
             if member.is_bot == True:
-                logger.log("Ban Member bot: " + member.username)
+                logger.log("Ban Member bot: " + helpers.user_display(member))
                 bot.ban_chat_member(message.chat.id, member.id)
     return
 
