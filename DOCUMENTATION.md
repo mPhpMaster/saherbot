@@ -8,7 +8,7 @@ A Telegram bot built with Python (`pyTelegramBotAPI`) to manage a specific group
 
 - Entry point: `main.py` → calls `init.startBot()`.
 - Settings are read from `.env` via `python-decouple` in `loader.py`.
-- On startup the `list/` folder is loaded (`helpers.load_lists()`), then `bot.polling()` starts.
+- On startup the `list/` folder is loaded (`helpers.load_lists()`), then `bot.infinity_polling()` starts (retries on Telegram **502/503** and short outages; plain `polling()` would exit on the first API error).
 
 ---
 

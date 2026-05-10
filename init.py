@@ -128,8 +128,18 @@ if int(loader.NOTIFY_RUN) == 1:
 def startBot():
     logger.log(loader.botName + " Running!")
     logger.log("Ctrl+C to close it.")
-    bot.polling()
-
-    logger.log("Exit!")
-    bot.stop_polling()
+    # infinity_polling: survives Telegram 5xx (e.g. 502 Bad Gateway) and network blips; plain polling() exits on first API error.
+    try:
+        bot.infinity_polling(
+            skip_pending=True,
+            timeout=60,
+            long_polling_timeout=60,
+        )
+    except KeyboardInterrupt:
+        logger.log("Exit (KeyboardInterrupt)!")
+    finally:
+        try:
+            bot.stop_polling()
+        except Exception:
+            pass
     return bot
