@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}نسخ احتياطي — SaherBot{% endblock %}
+{% block content %}
+<h1 class="sb-page-title h4 mb-1">نسخ احتياطي يدوي</h1>
+<p class="text-muted small mb-3">يُحفظ أرشيف ZIP تحت <code>data/backups/</code> (قاعدة SQLite إن وُجدت، مجلد <code>list/</code>).</p>
+<form method="post" action="/backup/create" class="card sb-card card-body" style="max-width: 26rem;">
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" name="include_env" value="1" id="incenv">
+    <label class="form-check-label" for="incenv">تضمين ملف <code>.env</code> (أسرار — بحذر)</label>
+  </div>
+  <button type="submit" class="btn btn-primary">إنشاء نسخة الآن</button>
+</form>
+
+<h2 class="sb-page-title h5 mt-4 mb-2">استعادة من نسخة ZIP</h2>
+<div class="alert alert-warning small">
+  أوقف البوت أولاً. اللوحة نفسها ستبقى مفتوحة أثناء الاستعادة، لذلك أعد تشغيل البوت بعد التأكد من النتيجة.
+</div>
+<form method="post" action="/backup/restore" class="card sb-card card-body" style="max-width: 38rem;">
+  <div class="mb-3">
+    <label class="form-label">ملف النسخة</label>
+    <select name="backup_file" class="form-select" required>
+      {% for b in backups %}
+      <option value="{{ b.name }}">{{ b.name }}</option>
+      {% else %}
+      <option value="">لا توجد نسخ</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">للتأكيد اكتب <code>RESTORE filename.zip</code> حسب الملف المحدد</label>
+    <input type="text" name="CONFIRM" class="form-control" autocomplete="off" required placeholder="RESTORE manual-YYYYMMDD-HHMMSS.zip">
+  </div>
+  <button type="submit" class="btn btn-danger" {% if not backups or bot_status == 'running' %}disabled{% endif %}>استعادة</button>
+  {% if bot_status == 'running' %}
+  <p class="text-danger small mb-0 mt-2">البوت يعمل حالياً؛ أوقفه قبل الاستعادة.</p>
+  {% endif %}
+</form>
+<a href="/" class="btn btn-link mt-2">← الرئيسية</a>
+{% endblock %}

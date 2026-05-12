@@ -1,6 +1,7 @@
 @echo off
 setlocal EnableDelayedExpansion
 
+set "REPO_ZIP_URL=https://github.com/mPhpMaster/saherbot/archive/refs/heads/main.zip"
 set "desktop=%USERPROFILE%\Desktop"
 if not exist "%desktop%" (
     echo Desktop folder not found: %desktop%
@@ -23,33 +24,31 @@ if exist "%installDir%" (
     rmdir /s /q "%installDir%"
 )
 
-set /p "botToken=Enter BOT_TOKEN value (leave blank to skip): "
-set /p "chatId=Enter CHAT_ID value (leave blank to skip): "
-
 cd /d "%desktop%"
-set "url=https://github.com/mPhpMaster/saherbot/archive/refs/heads/main.zip"
 set "zip=%TEMP%\saherbot-main.zip"
 set "extractPath=%TEMP%\saherbot-extract"
 
-if exist "%zip%" del "%zip%"
+if exist "%zip%" del /f /q "%zip%"
 if exist "%extractPath%" rmdir /s /q "%extractPath%"
 
-powershell -NoProfile -Command "Invoke-WebRequest -Uri '%url%' -OutFile '%zip%' -UseBasicParsing"
+echo Downloading SaherBot ZIP...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '%REPO_ZIP_URL%' -OutFile '%zip%' -UseBasicParsing"
 if errorlevel 1 (
     echo Failed to download the archive.
     pause
     exit /b 1
 )
 
-powershell -NoProfile -Command "Expand-Archive -Path '%zip%' -DestinationPath '%extractPath%' -Force"
+echo Extracting...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath '%zip%' -DestinationPath '%extractPath%' -Force"
 if errorlevel 1 (
     echo Failed to extract the archive.
-    del "%zip%"
+    del /f /q "%zip%" 2>nul
     pause
     exit /b 1
 )
 
-del "%zip%"
+del /f /q "%zip%" 2>nul
 
 for /d %%i in ("%extractPath%\*") do (
     move "%%i" "%installDir%"
@@ -60,21 +59,27 @@ pause
 exit /b 1
 
 :moved
-cd /d "%installDir%"
-call install.bat
+rmdir /s /q "%extractPath%" 2>nul
 
-set "envFile=%installDir%\.env"
-if exist "%envFile%" (
-    if not "%botToken%"=="" (
-        powershell -NoProfile -Command "(Get-Content '%envFile%') -replace '^(BOT_TOKEN\s*=).*$', '$1%botToken%' | Set-Content '%envFile%' -Encoding UTF8"
-    )
-    if not "%chatId%"=="" (
-        powershell -NoProfile -Command "(Get-Content '%envFile%') -replace '^(CHAT_ID\s*=).*$', '$1%chatId%' | Set-Content '%envFile%' -Encoding UTF8"
-    )
-    echo Updated .env with provided values.
-) else (
-    echo Warning: .env file not found at %installDir%. Please edit it manually after installation.
+cd /d "%installDir%"
+echo Running install.bat...
+call install.bat
+if errorlevel 1 (
+    echo install.bat failed.
+    pause
+    exit /b 1
 )
 
+if not exist "%installDir%\data" mkdir "%installDir%\data"
+if not exist "%installDir%\data\backups" mkdir "%installDir%\data\backups"
+
+echo.
+echo Done. Project: %installDir%
+echo Set DASHBOARD_PASSWORD in .env if needed, then toggle the dashboard:  run.bat
+echo   ^(or foreground: venv\Scripts\python.exe run_dashboard.py start^)
+echo.
+echo From the dashboard, sign in and start/stop the bot there.
+echo Uninstall scripts create a mandatory backup in data\backups\ before removal.
+echo See SETUP_WITHOUT_GIT.md or DOCUMENTATION.md for details.
 pause
 exit /b 0

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}كلمات ممنوعة {{ chat.chat_id }} — SaherBot{% endblock %}
+{% block content %}
+{% include "partials/chat_toolbar.html" %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <div>
+    <h1 class="sb-page-title h4 mb-1">كلمات ممنوعة</h1>
+    <p class="small text-muted mb-0">قائمة المقاطع المحظورة في النص والتعليق لهذه المحادثة.</p>
+  </div>
+</div>
+<p class="small text-muted mb-3">
+  يحذف البوت الرسالة إذا وُجدت إحدى هذه الكلمات كجزء من النص أو التعليق (غير حساس لحالة الأحرف، بعد تطبيع المسافات).
+  <strong>ملاحظة:</strong> العدّ نحو الطرد يُخزَّن في الذاكرة فقط حتى إعادة تشغيل البوت.
+</p>
+
+<div class="card sb-card mb-3">
+  <div class="card-body">
+    <h2 class="h6 mb-3">إضافة كلمة</h2>
+    <form method="post" action="/chats/{{ chat.chat_id }}/banned-words" class="row g-2 align-items-end">
+      <div class="col-md-8 col-12">
+        <label class="form-label mb-1 small">الكلمة أو المقطع</label>
+        <input type="text" name="word" class="form-control form-control-sm" required maxlength="512" placeholder="مثال: سبام">
+      </div>
+      <div class="col-md-auto col-12">
+        <button type="submit" class="btn btn-primary btn-sm">إضافة</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card sb-card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>الكلمة (مخزّنة بأحرف صغيرة)</th>
+          <th class="text-end">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td><code>{{ r.word }}</code></td>
+          <td class="text-end">
+            <form method="post" action="/chats/{{ chat.chat_id }}/banned-words/{{ r.id }}/delete" class="d-inline" onsubmit="return confirm('حذف هذه الكلمة؟');">
+              <button type="submit" class="btn btn-sm btn-outline-danger">حذف</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3">
+          <div class="sb-empty">
+            <strong>لا توجد كلمات ممنوعة لهذه المحادثة.</strong>
+          </div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

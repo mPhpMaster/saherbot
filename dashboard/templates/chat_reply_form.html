@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{% if reply %}تعديل رد{% else %}رد جديد{% endif %} — {{ chat_id }} — SaherBot{% endblock %}
+{% block content %}
+{% if chat is defined and chat %}
+{% include "partials/chat_toolbar.html" %}
+{% endif %}
+<h1 class="sb-page-title h4 mb-3">{% if reply %}تعديل رد #{{ reply.id }}{% else %}إضافة رد تلقائي{% endif %}</h1>
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+<form method="post" action="{% if reply %}/chats/{{ chat_id }}/replies/{{ reply.id }}/edit{% else %}/chats/{{ chat_id }}/replies/new{% endif %}" class="card sb-card card-body" style="max-width: 34rem;">
+  <div class="mb-3">
+    <label class="form-label">المحفّز (الكلمة)</label>
+    <input type="text" name="trigger" class="form-control" required value="{{ reply.trigger if reply else '' }}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">نوع الرد</label>
+    <select name="response_type" class="form-select">
+      <option value="text" {% if not reply or reply.response_type == 'text' %}selected{% endif %}>نص</option>
+      <option value="photo" {% if reply and reply.response_type == 'photo' %}selected{% endif %}>صورة (مسار)</option>
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">نص الرد</label>
+    <textarea name="response_text" class="form-control" rows="3">{{ reply.response_text if reply else '' }}</textarea>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">مسار الصورة (لنوع photo)</label>
+    <input type="text" name="photo_path" class="form-control" placeholder="list/..." value="{{ reply.photo_path if reply else '' }}">
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" name="enabled" value="1" id="en" {% if not reply or reply.enabled %}checked{% endif %}>
+    <label class="form-check-label" for="en">مفعّل</label>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <button type="submit" class="btn btn-primary">حفظ</button>
+    <a href="/chats/{{ chat_id }}/replies" class="btn btn-outline-secondary">العودة لقائمة الردود</a>
+  </div>
+</form>
+{% endblock %}

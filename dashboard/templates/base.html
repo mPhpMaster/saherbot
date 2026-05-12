@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}SaherBot{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <link href="/static/dashboard.css" rel="stylesheet">
+</head>
+<body class="sb-body">
+<a class="visually-hidden-focusable btn btn-sm btn-outline-primary position-fixed top-0 start-0 m-2" href="#sb-main" style="z-index: 1080;">تخطي إلى المحتوى</a>
+<nav class="navbar navbar-expand-lg navbar-dark sb-navbar mb-4" aria-label="التنقل الرئيسي">
+  <div class="container flex-wrap">
+    <a class="navbar-brand" href="/">SaherBot</a>
+    {% if request.session.get('dash_ok') %}
+    <div class="d-flex align-items-center flex-wrap gap-2 sb-navbar-bot order-lg-1 ms-lg-3 me-lg-auto">
+      <span id="sb-bot-badge" class="badge sb-badge-status sb-bot-badge bg-secondary">{% set sbst = bot_status|default('stopped') %}{{ {'stopped': 'متوقف', 'running': 'يعمل', 'stale': 'غير متزامن'}.get(sbst, sbst) }}</span>
+      <span id="sb-bot-pid" class="text-white-50 small text-nowrap">{% if bot_pid is defined and bot_pid %}PID {{ bot_pid }}{% endif %}</span>
+      <div class="btn-group btn-group-sm" role="group" aria-label="تحكم البوت">
+        <form method="post" action="/bot/start" class="d-inline m-0 sb-botctl-form" data-sb-action="start">
+          <button type="submit" class="btn btn-success btn-sm">تشغيل</button>
+        </form>
+        <form method="post" action="/bot/stop" class="d-inline m-0 sb-botctl-form" data-sb-action="stop">
+          <button type="submit" class="btn btn-warning btn-sm">إيقاف</button>
+        </form>
+        <form method="post" action="/bot/restart" class="d-inline m-0 sb-botctl-form" data-sb-action="restart">
+          <button type="submit" class="btn btn-outline-light btn-sm">إعادة تشغيل</button>
+        </form>
+      </div>
+    </div>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sbNav" aria-controls="sbNav" aria-expanded="false" aria-label="قائمة">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="sbNav">
+      <div class="navbar-nav ms-auto gap-lg-1">
+        <a class="nav-link sb-nav-link" href="/">الرئيسية</a>
+        <a class="nav-link sb-nav-link" href="/bots">البوتات</a>
+        <a class="nav-link sb-nav-link" href="/chats">المحادثات</a>
+        <a class="nav-link sb-nav-link" href="/events">الأحداث</a>
+        <a class="nav-link sb-nav-link" href="/backup">نسخ احتياطي</a>
+        <a class="nav-link sb-nav-link text-warning" href="/logout">خروج</a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</nav>
+<main id="sb-main" class="container pb-5 sb-main" tabindex="-1">
+  {% if flash %}
+  <div class="alert alert-info alert-dismissible fade show sb-flash mb-4" role="status">
+    {{ flash }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="إغلاق"></button>
+  </div>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+{% if request.session.get('dash_ok') %}
+<footer class="sb-footer">
+  <div class="container"><span class="text-secondary">SaherBot</span> — لوحة التحكم · للاستخدام المحلي</div>
+</footer>
+{% endif %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% if request.session.get('dash_ok') %}
+<script>
+(function () {
+  var labels = { stopped: 'متوقف', running: 'يعمل', stale: 'غير متزامن' };
+  var badge = document.getElementById('sb-bot-badge');
+  var pidEl = document.getElementById('sb-bot-pid');
+  function apply(data) {
+    if (!badge) return;
+    var st = (data && data.status) ? data.status : 'stopped';
+    badge.textContent = labels[st] || st;
+    badge.className = 'badge sb-badge-status sb-bot-badge ' +
+      (st === 'running' ? 'bg-success' : st === 'stale' ? 'bg-warning text-dark' : 'bg-secondary');
+    var lm = (data && data.last_message != null) ? String(data.last_message) : '';
+    badge.setAttribute('title', lm);
+    if (pidEl) {
+      pidEl.textContent = (data && data.pid) ? ('PID ' + data.pid) : '';
+    }
+  }
+  function tick() {
+    fetch('/api/bot-status', { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+      .then(apply)
+      .catch(function () {});
+  }
+  if (badge) {
+    tick();
+    setInterval(tick, 1000);
+  }
+
+  var notifyTitles = { start: 'تشغيل البوت', stop: 'إيقاف البوت', restart: 'إعادة تشغيل البوت' };
+  var notifyErrTitles = { start: 'Start failed', stop: 'Stop failed', restart: 'Restart failed' };
+  function serverMessageBody(data, r) {
+    if (data && typeof data === 'object') {
+      var d = data.detail;
+      if (d != null) {
+        if (typeof d === 'string') return d;
+        if (Array.isArray(d)) {
+          return d.map(function (item) {
+            return (item && item.msg) ? String(item.msg) : JSON.stringify(item);
+          }).join(' ');
+        }
+        if (typeof d === 'object' && d.msg) return String(d.msg);
+      }
+      if (data.message != null) return String(data.message);
+      if (data.msg != null) return String(data.msg);
+      if (data.error != null) return String(data.error);
+    }
+    if (r && !r.ok) return r.statusText || ('HTTP ' + r.status);
+    return 'Request failed';
+  }
+  function showBotNotify(action, message, isError) {
+    if (!('Notification' in window)) return;
+    var title = isError
+      ? (notifyErrTitles[action] || 'Bot control failed')
+      : (notifyTitles[action] || 'SaherBot');
+    var body = (message || '').toString().slice(0, 500);
+    var lang = isError ? 'en' : 'ar';
+    try {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(function (p) {
+          if (p === 'granted') new Notification(title, { body: body, lang: lang });
+        });
+      } else if (Notification.permission === 'granted') {
+        new Notification(title, { body: body, lang: lang });
+      }
+    } catch (e) {}
+  }
+  document.querySelectorAll('form.sb-botctl-form').forEach(function (form) {
+    form.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var action = form.getAttribute('data-sb-action') || '';
+      var fd = new FormData(form);
+      fetch(form.action, {
+        method: 'POST',
+        body: fd,
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' }
+      })
+        .then(function (r) {
+          var ct = (r.headers.get('content-type') || '').toLowerCase();
+          if (ct.indexOf('application/json') !== -1) {
+            return r.json().then(function (data) {
+              return { r: r, data: data };
+            });
+          }
+          return r.text().then(function (text) {
+            return { r: r, data: { message: text, ok: false } };
+          });
+        })
+        .then(function (packed) {
+          var r = packed.r;
+          var data = packed.data;
+          var ok = data && data.ok === true;
+          var body = serverMessageBody(data, r);
+          if (!r.ok || !ok) {
+            showBotNotify(action, body, true);
+          } else {
+            showBotNotify(action, body, false);
+          }
+          tick();
+        })
+        .catch(function (err) {
+          var t = (err && err.message) ? err.message : 'Network error';
+          showBotNotify(action, t, true);
+          tick();
+        });
+    });
+  });
+})();
+</script>
+{% endif %}
+</body>
+</html>

@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}الرئيسية — SaherBot{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+  <div>
+    <h1 class="sb-page-title h3 mb-1">لوحة التحكم</h1>
+    <p class="text-muted small mb-0">نظرة سريعة على البوتات والمحادثات والأحداث الأخيرة.</p>
+  </div>
+  <div class="d-none d-md-flex gap-2">
+    <a href="/events" class="btn btn-outline-primary btn-sm">عرض كل الأحداث</a>
+    <a href="/backup" class="btn btn-outline-secondary btn-sm">نسخ احتياطي</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4 col-xl">
+    <div class="sb-stat text-center">
+      <div class="value">{{ n_bots|default(0) }}</div>
+      <div class="label">بوتات مسجّلة</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl">
+    <div class="sb-stat text-center">
+      <div class="value">{{ n_chats }}</div>
+      <div class="label">محادثات مسجّلة</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl">
+    <div class="sb-stat text-center">
+      <div class="value text-success">{{ n_chats_mod }}</div>
+      <div class="label">مراقبة مفعّلة</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl">
+    <div class="sb-stat text-center">
+      <div class="value">{{ n_replies }}</div>
+      <div class="label">ردود تلقائية</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4 col-xl">
+    <div class="sb-stat text-center">
+      <div class="value">{{ n_events }}</div>
+      <div class="label">أحداث (الكل)</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card sb-card h-100">
+      <div class="card-header">نشاط</div>
+      <div class="card-body">
+        <div class="d-flex align-items-baseline gap-2 mb-2">
+          <span class="display-6 fw-bold text-primary">{{ n_events_24h }}</span>
+          <span class="text-muted small">حدث خلال آخر 24 ساعة</span>
+        </div>
+        <p class="small text-muted mb-0">حالة البوت وتشغيلها من شريط التنقل أعلاه؛ تُحدَّث تلقائياً كل ثانية.</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card sb-card h-100">
+      <div class="card-header">اختصارات</div>
+      <div class="card-body d-flex flex-column gap-2">
+        <a href="/bots" class="btn btn-outline-primary btn-sm">إدارة البوتات والتوكنات</a>
+        <a href="/chats" class="btn btn-outline-primary btn-sm">المحادثات وحدود الطول و echo</a>
+        <a href="/chats" class="btn btn-outline-secondary btn-sm">الردود التلقائية (لكل محادثة)</a>
+        <a href="/events" class="btn btn-outline-secondary btn-sm">سجل الأحداث</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card sb-card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>آخر الأحداث</span>
+    <a href="/events" class="small text-decoration-none">عرض الكل ←</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>الوقت</th>
+          <th>النوع</th>
+          <th>المحادثة</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ev in recent_events %}
+        <tr>
+          <td>{{ ev.id }}</td>
+          <td class="text-nowrap small">{{ ev.ts }}</td>
+          <td class="small">{{ event_type_label_ar(ev.event_type) }}</td>
+          <td>{{ ev.chat_id if ev.chat_id is not none else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4">
+          <div class="sb-empty">
+            <strong>لا توجد أحداث بعد.</strong>
+            ستظهر هنا أحداث البوت بمجرد التشغيل.
+          </div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if global_settings %}
+<div class="card sb-card mt-4">
+  <div class="card-header">الإعدادات العامة (أوصاف البوت)</div>
+  <div class="card-body">
+    <p class="small text-muted mb-3">
+      التوكن والمحادثة الأساسية وإشعار التشغيل يُضبطان لكل بوت من صفحة <a href="/bots">البوتات</a>.
+      طول الرسالة و<strong>echo</strong> لكل محادثة من <a href="/chats">المحادثات</a>.
+      تُطبَّق الأوصاف أدناه على جميع عمليات البوت بعد <strong>إعادة تشغيل البوت</strong>.
+    </p>
+    <form method="post" action="/settings/global" class="row g-3" style="max-width: 42rem;">
+      <div class="col-12">
+        <label class="form-label">وصف البوت (Bio)</label>
+        <textarea name="bot_description" class="form-control" rows="3" placeholder="اختياري">{{ global_settings.bot_description or '' }}</textarea>
+      </div>
+      <div class="col-12">
+        <label class="form-label">الوصف القصير</label>
+        <input type="text" name="bot_short_description" class="form-control" value="{{ global_settings.bot_short_description or '' }}" placeholder="اختياري">
+      </div>
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary px-4">حفظ</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-warning mt-4">لم تُحمّل الإعدادات العامة من القاعدة. أعد تشغيل اللوحة أو تحقق من مجلد <code>data</code>.</div>
+{% endif %}
+{% endblock %}

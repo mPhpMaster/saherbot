@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}تسجيل الدخول — SaherBot{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-center align-items-center sb-login-wrap py-4">
+  <div style="width: 100%; max-width: 24rem;">
+    <h1 class="sb-page-title h4 mb-1 text-center">SaherBot</h1>
+    <p class="text-muted small text-center mb-4">سجّل الدخول للوصول إلى لوحة التحكم</p>
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    <form method="post" action="/login" class="card sb-card card-body">
+      <label class="form-label">كلمة المرور</label>
+      <input type="password" name="password" class="form-control" required autocomplete="current-password" autofocus>
+      <button type="submit" class="btn btn-primary mt-3 w-100">دخول</button>
+    </form>
+    <p class="text-muted small mt-3 text-center">يُضبط عبر <code>DASHBOARD_PASSWORD</code> في ملف البيئة.</p>
+  </div>
+</div>
+{% endblock %}

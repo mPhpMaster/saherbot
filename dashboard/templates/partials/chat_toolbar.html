@@ -1,0 +1,27 @@
+{# يتطلب: كائن ``chat`` (صف من جدول المحادثات) #}
+{% if chat is defined and chat %}
+<div class="sb-chat-toolbar card sb-card mb-3" aria-label="تنقل المحادثة">
+  <div class="card-body py-3 px-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div class="d-flex flex-column gap-1">
+        <span class="sb-chat-toolbar-kicker small text-muted mb-0">المحادثة الحالية</span>
+        <div class="d-flex flex-wrap align-items-baseline gap-2">
+          <code class="sb-chat-id-code user-select-all mb-0">{{ chat.chat_id }}</code>
+          {% if chat.title %}<span class="text-secondary small">{{ chat.title }}</span>{% endif %}
+        </div>
+      </div>
+      <div class="btn-group btn-group-sm flex-wrap" role="navigation" aria-label="أقسام المحادثة">
+        <a href="/chats/{{ chat.chat_id }}/edit" class="btn btn-outline-secondary">تعديل المحادثة</a>
+        <a href="/chats/{{ chat.chat_id }}/replies#sb-quick-replies-actions" class="btn btn-outline-secondary">ردود تلقائية</a>
+        <a href="/chats/{{ chat.chat_id }}/banned-words" class="btn btn-outline-secondary">كلمات ممنوعة</a>
+        {% if chat.bot_id %}
+        <a href="/bots/{{ chat.bot_id }}/edit" class="btn btn-outline-primary">تعديل البوت</a>
+        {% endif %}
+      </div>
+    </div>
+    <div class="mt-3 pt-2 border-top sb-toolbar-footer">
+      <a href="/chats" class="sb-toolbar-back small text-decoration-none">جميع المحادثات</a>
+    </div>
+  </div>
+</div>
+{% endif %}

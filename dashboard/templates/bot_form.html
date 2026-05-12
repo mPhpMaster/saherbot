@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}{% if bot %}تعديل بوت{% else %}بوت جديد{% endif %} — SaherBot{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <h1 class="sb-page-title h3 mb-0">{% if bot %}تعديل البوت #{{ bot.id }}{% else %}بوت جديد{% endif %}</h1>
+  <a href="/bots" class="btn btn-link btn-sm">← البوتات</a>
+</div>
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+<form method="post" action="{% if bot %}/bots/{{ bot.id }}/edit{% else %}/bots/new{% endif %}" class="card sb-card card-body" style="max-width: 32rem;">
+  <div class="mb-3">
+    <label class="form-label">اسم للعرض (اختياري)</label>
+    <input type="text" name="name" class="form-control" value="{{ bot.name if bot else '' }}" placeholder="مثال: بوت المجموعة أ">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">توكن BotFather</label>
+    <input type="text" name="bot_token" class="form-control font-monospace" dir="ltr" spellcheck="false" autocomplete="off" value="{% if bot and bot.bot_token %}{{ bot.bot_token }}{% endif %}" placeholder="{% if bot %}اتركه فارغاً للإبقاء على التوكن الحالي{% else %}الصق التوكن{% endif %}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">المحادثة الأساسية (للأوامر الخاصة مثل /id وللتحقق من المشرفين)</label>
+    <input type="text" name="primary_chat_id" class="form-control" value="{% if bot and bot.primary_chat_id %}{{ bot.primary_chat_id }}{% endif %}" placeholder="-1001845637233">
+    <div class="form-text">معرف مجموعة (من <code>/id</code>). يُقبل <code dir="ltr">-100…</code> أو الشكل <code dir="ltr">100…</code> بدون سالب.</div>
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" name="notify_on_startup" value="1" id="n" {% if bot and bot.notify_on_startup %}checked{% endif %}>
+    <label class="form-check-label" for="n">إشعار عند التشغيل في المحادثة الأساسية</label>
+  </div>
+  <button type="submit" class="btn btn-primary">حفظ</button>
+  <a href="/bots" class="btn btn-link">إلغاء</a>
+</form>
+
+{% if bot %}
+<h2 class="h5 mt-4">إضافة محادثة مرتبطة بهذا البوت</h2>
+<p class="small text-muted">يُربط <code>bot_id</code> تلقائياً بهذا البوت؛ القواعد نفسها كصفحة «إضافة محادثة».</p>
+<form method="post" action="/bots/{{ bot.id }}/chats/new" class="card sb-card card-body mt-2" style="max-width: 28rem;">
+  <div class="mb-3">
+    <label class="form-label">معرف المحادثة (رقم المجموعة)</label>
+    <input type="text" name="chat_id" class="form-control" required placeholder="-1001845637233">
+    <div class="form-text small text-muted">يُقبل سالباً أو <code dir="ltr">100…</code> بدون سالب.</div>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">عنوان (اختياري)</label>
+    <input type="text" name="title" class="form-control" value="">
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" name="moderation_enabled" value="1" id="mod_bot" checked>
+    <label class="form-check-label" for="mod_bot">تفعيل المراقبة (الإشراف)</label>
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" name="moderation_apply_to_admins" value="1" id="mod_admins_bot">
+    <label class="form-check-label" for="mod_admins_bot">تطبيق الإشراف على المشرفين</label>
+  </div>
+  <p class="small text-secondary fw-semibold mb-2">منع المحتوى</p>
+  <div class="form-check mb-2">
+    <input class="form-check-input" type="checkbox" name="moderation_block_phones" value="1" id="blk_phone_bot" checked>
+    <label class="form-check-label" for="blk_phone_bot">منع أرقام الجوال</label>
+  </div>
+  <div class="form-check mb-2">
+    <input class="form-check-input" type="checkbox" name="moderation_block_mentions" value="1" id="blk_mention_bot" checked>
+    <label class="form-check-label" for="blk_mention_bot">منع تاق المستخدمين</label>
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" name="moderation_block_links" value="1" id="blk_link_bot" checked>
+    <label class="form-check-label" for="blk_link_bot">منع الروابط</label>
+  </div>
+  <p class="small text-secondary fw-semibold mb-2">أنواع الرسائل المسموحة</p>
+  <div class="row g-2 mb-3">
+    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_audio" value="1" id="ct_audio_bot" checked><label class="form-check-label" for="ct_audio_bot">صوت</label></div></div>
+    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_photo" value="1" id="ct_photo_bot" checked><label class="form-check-label" for="ct_photo_bot">صورة</label></div></div>
+    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_voice" value="1" id="ct_voice_bot" checked><label class="form-check-label" for="ct_voice_bot">صوتية</label></div></div>
+    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_video" value="1" id="ct_video_bot" checked><label class="form-check-label" for="ct_video_bot">فيديو</label></div></div>
+    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_text" value="1" id="ct_text_bot" checked><label class="form-check-label" for="ct_text_bot">نص</label></div></div>
+    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_document" value="1" id="ct_document_bot"><label class="form-check-label" for="ct_document_bot">ملف</label></div></div>
+    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_sticker" value="1" id="ct_sticker_bot"><label class="form-check-label" for="ct_sticker_bot">ملصق</label></div></div>
+    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_location" value="1" id="ct_location_bot"><label class="form-check-label" for="ct_location_bot">موقع</label></div></div>
+    <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_contact" value="1" id="ct_contact_bot"><label class="form-check-label" for="ct_contact_bot">جهة اتصال</label></div></div>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">حد طول الرسالة (لهذه المحادثة فقط)</label>
+    <input type="text" name="msg_max_length" class="form-control" value="" placeholder="فارغ = 300">
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" name="msg_length_unlimited" value="1" id="unlimited_bot">
+    <label class="form-check-label" for="unlimited_bot">تعطيل حد الطول لهذه المحادثة</label>
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" name="echo_enabled" value="1" id="echo_bot">
+    <label class="form-check-label" for="echo_bot">تفعيل echo لهذه المحادثة</label>
+  </div>
+  <button type="submit" class="btn btn-primary">إضافة المحادثة</button>
+</form>
+{% endif %}
+
+{% if linked_chats is defined and linked_chats %}
+<div class="card sb-card mt-4">
+  <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <span>المحادثات المرتبطة بهذا البوت</span>
+    <span class="badge bg-light text-dark border">{{ linked_chats|length }}</span>
+  </div>
+  <div class="card-body">
+    {% for c in linked_chats %}
+    <div class="sb-linked-chat-row d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div class="min-w-0">
+        <code class="sb-chat-id-code user-select-all d-inline-block">{{ c.chat_id }}</code>
+        <div class="small text-secondary mt-1">{{ c.title or 'بدون عنوان' }}</div>
+      </div>
+      <div class="btn-group btn-group-sm flex-shrink-0" role="group" aria-label="إجراءات المحادثة">
+        <a href="/chats/{{ c.chat_id }}/edit" class="btn btn-outline-secondary">تعديل</a>
+        <a href="/chats/{{ c.chat_id }}/replies" class="btn btn-outline-secondary">ردود</a>
+        <a href="/chats/{{ c.chat_id }}/banned-words" class="btn btn-outline-secondary">كلمات ممنوعة</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

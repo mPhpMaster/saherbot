@@ -67,7 +67,14 @@ popd
 echo.
 if "%ERR%"=="0" (
   echo Done. Project: %ROOT%
-  echo Edit .env there, then run run.bat
+  if not exist "%ROOT%\data" mkdir "%ROOT%\data"
+  echo Ensured data\ exists for the dashboard database, PID files, and backups.
+  echo Toggle the dashboard ^(on/off in background^):  run.bat
+  echo Foreground dashboard:  venv\Scripts\python.exe run_dashboard.py start
+  echo.
+  echo From the dashboard, sign in and start/stop the bot there.
+  echo Uninstall scripts create a mandatory backup in data\backups\ before removal.
+  echo Linux/macOS users should use: git clone ... then ./install.sh
 ) else (
   echo install.bat exited with code %ERR%.
 )

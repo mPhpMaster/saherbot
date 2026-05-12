@@ -1,7 +1,11 @@
-$desktop = [Environment]::GetFolderPath('Desktop')
-if (-not (Test-Path $desktop)) { Throw "Desktop folder not found: $desktop" }
+$ErrorActionPreference = 'Stop'
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-$defaultDir = 'saherbot-main'
+$desktop = [Environment]::GetFolderPath('Desktop')
+if (-not (Test-Path $desktop)) { throw "Desktop folder not found: $desktop" }
+
+$repoZipUrl = 'https://github.com/mPhpMaster/saherbot/archive/refs/heads/main.zip'
+$defaultDir = 'saherbot'
 $installName = Read-Host "Enter installation folder name on Desktop [$defaultDir]"
 if ([string]::IsNullOrWhiteSpace($installName)) { $installName = $defaultDir }
 
@@ -15,37 +19,42 @@ if (Test-Path $installDir) {
     Remove-Item -Recurse -Force $installDir
 }
 
-$botToken = Read-Host 'Enter BOT_TOKEN value (leave blank to skip)'
-$chatId = Read-Host 'Enter CHAT_ID value (leave blank to skip)'
-
 Set-Location $desktop
-$url = 'https://github.com/mPhpMaster/saherbot/archive/refs/heads/main.zip'
 $zip = Join-Path $env:TEMP 'saherbot-main.zip'
 $extractPath = Join-Path $env:TEMP 'saherbot-extract'
 
 Remove-Item -Recurse -Force $zip,$extractPath -ErrorAction SilentlyContinue
-Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+
+Write-Host 'Downloading SaherBot ZIP...'
+Invoke-WebRequest -Uri $repoZipUrl -OutFile $zip -UseBasicParsing
+
+Write-Host 'Extracting...'
 Expand-Archive -Path $zip -DestinationPath $extractPath -Force
 Remove-Item $zip
 
 $rootFolder = Get-ChildItem -Path $extractPath | Where-Object { $_.PSIsContainer } | Select-Object -First 1
-if (-not $rootFolder) { Throw "Failed to extract archive to $extractPath" }
+if (-not $rootFolder) { throw "Failed to extract archive to $extractPath" }
 Move-Item -Path $rootFolder.FullName -Destination $installDir
+Remove-Item -Recurse -Force $extractPath -ErrorAction SilentlyContinue
 
 Set-Location $installDir
-.\install.bat
-
-$envFile = Join-Path $installDir '.env'
-if (Test-Path $envFile) {
-    $content = Get-Content $envFile -Raw
-    if (-not [string]::IsNullOrWhiteSpace($botToken)) {
-        $content = [regex]::Replace($content, '^(BOT_TOKEN\s*=).*$', "`$1$botToken", 'Multiline')
-    }
-    if (-not [string]::IsNullOrWhiteSpace($chatId)) {
-        $content = [regex]::Replace($content, '^(CHAT_ID\s*=).*$', "`$1$chatId", 'Multiline')
-    }
-    Set-Content -Path $envFile -Value $content -Encoding UTF8
-    Write-Host "Updated .env with provided values."
-} else {
-    Write-Host "Warning: .env file not found at $installDir. Please edit it manually after installation."
+Write-Host 'Running install.bat...'
+cmd /c install.bat
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "install.bat failed (exit $LASTEXITCODE)."
+    exit $LASTEXITCODE
 }
+
+$data = Join-Path $installDir 'data'
+$backups = Join-Path $installDir 'data\backups'
+if (-not (Test-Path $data)) { New-Item -ItemType Directory -Path $data | Out-Null }
+if (-not (Test-Path $backups)) { New-Item -ItemType Directory -Path $backups | Out-Null }
+
+Write-Host ""
+Write-Host "Done. Project: $installDir"
+Write-Host "Set DASHBOARD_PASSWORD in .env if needed, then toggle the dashboard:  ./run.sh"
+Write-Host "  (or foreground: ./venv/bin/python3 run_dashboard.py start)"
+Write-Host ""
+Write-Host "From the dashboard, sign in and start/stop the bot there."
+Write-Host "Uninstall scripts create a mandatory backup in data\backups\ before removal."
+Write-Host "See SETUP_WITHOUT_GIT.md or DOCUMENTATION.md for details."

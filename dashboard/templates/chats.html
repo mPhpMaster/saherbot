@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}المحادثات — SaherBot{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <div>
+    <h1 class="sb-page-title h4 mb-1">المحادثات المراقبة</h1>
+    <p class="text-muted small mb-0">تبديل «المراقبة» يُحدَّث في البوت دون إعادة تشغيل (عبر مراجعة الإعدادات).</p>
+  </div>
+  <a href="/chats/new" class="btn btn-primary btn-sm">إضافة محادثة</a>
+</div>
+
+<div class="card sb-card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>المعرف</th>
+          <th>البوت</th>
+          <th>العنوان</th>
+          <th>مراقبة</th>
+          <th class="text-end">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in chats %}
+        <tr>
+          <td><code>{{ c.chat_id }}</code></td>
+          <td class="text-nowrap">{% if c.bot_id and bots_by_id.get(c.bot_id) %}<span class="badge bg-light text-dark border">#{{ c.bot_id }} {{ bots_by_id[c.bot_id].name or '' }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          <td>{{ c.title or '—' }}</td>
+          <td>
+            {% if c.moderation_enabled %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle">نعم</span>
+            {% if c.moderation_apply_to_admins %}
+            <span class="badge bg-warning-subtle text-dark border border-warning-subtle ms-1" title="الإشراف يشمل المشرفين">+ مشرفون</span>
+            {% endif %}
+            {% else %}
+            <span class="badge bg-light text-muted border">لا</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm flex-wrap" role="group">
+              <a href="/chats/{{ c.chat_id }}/edit" class="btn btn-outline-secondary">تعديل</a>
+              <a href="/chats/{{ c.chat_id }}/replies#sb-quick-replies-actions" class="btn btn-outline-secondary">ردود</a>
+              <a href="/chats/{{ c.chat_id }}/banned-words" class="btn btn-outline-secondary">كلمات ممنوعة</a>
+              {% if c.bot_id %}
+              <a href="/bots/{{ c.bot_id }}/edit" class="btn btn-outline-primary">البوت</a>
+              {% endif %}
+              <a href="/events?chat_id={{ c.chat_id }}" class="btn btn-outline-primary">الأحداث</a>
+            </div>
+            <form method="post" action="/chats/{{ c.chat_id }}/delete" class="d-inline ms-1" onsubmit="return confirm('حذف هذا الصف؟');">
+              <button type="submit" class="btn btn-sm btn-outline-danger">حذف</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">
+          <div class="sb-empty">
+            <strong>لا توجد محادثات مسجّلة بعد.</strong>
+            أضف محادثة لربطها ببوت ومراقبتها.
+          </div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<a href="/" class="btn btn-link mt-3">← الرئيسية</a>
+{% endblock %}

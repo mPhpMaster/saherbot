@@ -45,23 +45,41 @@ if errorlevel 1 (
 echo [4/5] Folders...
 if not exist "logs" mkdir logs
 if not exist "list" mkdir list
+if not exist "data" mkdir data
+if not exist "data\backups" mkdir data\backups
+if not exist "data" mkdir data
 
 echo [5/5] Environment file...
+set "DO_ENV_PROMPT=0"
 if not exist ".env" (
   if exist ".env.example" (
     copy /Y ".env.example" ".env" >nul
     echo       Created .env from .env.example
+    set "DO_ENV_PROMPT=1"
   ) else (
     echo       [WARN] .env.example missing - create .env manually.
   )
 ) else (
-  echo       .env already exists, not overwritten.
+  echo       .env already exists ^(not overwritten^).
+  set /p "RECfg=Configure required .env variables now? (Y/N): "
+  if /i "!RECfg!"=="Y" set "DO_ENV_PROMPT=1"
+)
+if "!DO_ENV_PROMPT!"=="1" (
+  echo.
+  echo --- Interactive .env ---
+  "venv\Scripts\python.exe" "%~dp0scripts\write_install_env.py"
+  if errorlevel 1 (
+    echo [ERROR] .env setup failed.
+    goto :end_error
+  )
 )
 
 echo.
 echo Setup finished.
-echo - Edit .env: set BOT_TOKEN and CHAT_ID ^(use /id in the group as admin^).
-echo - Start the bot: run run.bat
+echo - Toggle dashboard ^(start if stopped, stop if running^):  run.bat
+echo - Foreground dashboard ^(this window^):  venv\Scripts\python.exe run_dashboard.py start
+echo - Bot process alone ^(developers^):  venv\Scripts\python.exe main.py
+echo - Normal use: open the dashboard, set token and chats, then start the bot from the UI.
 echo.
 goto :end_ok
 

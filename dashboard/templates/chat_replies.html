@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}ردود {{ chat.chat_id }} — SaherBot{% endblock %}
+{% block content %}
+{% include "partials/chat_toolbar.html" %}
+
+<div id="sb-quick-replies-actions" class="card sb-card sb-quick-actions mb-3">
+  <div class="card-header py-2 d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <span class="small fw-semibold mb-0">إجراءات سريعة</span>
+    <span class="badge text-bg-primary rounded-pill">نسخ · استيراد</span>
+  </div>
+  <div class="card-body py-3">
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <h2 class="h6 mb-2">نسخ الردود التلقائية من محادثة أخرى</h2>
+        <p class="small text-muted mb-2">ينسخ جميع محفّزات وردود المحادثة المصدر إلى <strong>هذه</strong> المحادثة.</p>
+        <form method="post" action="/chats/{{ chat.chat_id }}/replies/copy" class="d-flex flex-wrap gap-2 align-items-end">
+          <div class="flex-grow-1" style="min-width: 12rem;">
+            <label class="form-label mb-1 small" for="sb-replies-copy-source">المحادثة المصدر</label>
+            <select id="sb-replies-copy-source" name="source_chat_id" class="form-select form-select-sm" {% if other_chats %}required{% else %}disabled{% endif %}>
+              {% if other_chats %}
+              {% for o in other_chats %}
+              <option value="{{ o.chat_id }}">{{ o.chat_id }} — {{ o.title or 'بدون عنوان' }}</option>
+              {% endfor %}
+              {% else %}
+              <option value="">— لا توجد محادثة أخرى مسجّلة —</option>
+              {% endif %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm" {% if not other_chats %}disabled aria-disabled="true"{% endif %}>نسخ الردود</button>
+        </form>
+        {% if not other_chats %}
+        <p class="small text-muted mb-0 mt-2">فعّل النسخ بإضافة محادثة ثانية من <a href="/chats">قائمة المحادثات</a> ثم ارجع إلى هذه الصفحة واخترها من القائمة أعلاه.</p>
+        {% endif %}
+      </div>
+      <div class="col-lg-6 border-lg-start ps-lg-3 mt-3 mt-lg-0">
+        <h2 class="h6 mb-2">قراءة مجلد <code>list/</code></h2>
+        <p class="small text-muted mb-2">يضيف ردوداً من ملفات المجلد لكل اسم ملف محفّزاً جديداً فقط (لا يستبدل الموجود).</p>
+        <form method="post" action="/chats/{{ chat.chat_id }}/replies/import-list" onsubmit="return confirm('استيراد الردود من مجلد list/ لهذه المحادثة؟');">
+          <button type="submit" class="btn btn-outline-secondary btn-sm">استيراد من list/</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <div>
+    <h1 class="sb-page-title h4 mb-1">ردود تلقائية</h1>
+    <p class="small text-muted mb-0">إدارة المحفّزات والردود لهذه المحادثة.</p>
+  </div>
+  <a href="/chats/{{ chat.chat_id }}/replies/new" class="btn btn-primary btn-sm">إضافة رد</a>
+</div>
+<p class="small text-muted mb-3">يُطابق البوت نص الرسالة مع المحفّز (غير حساس لحالة الأحرف) من جدول الردود أدناه فقط. أمر <code>/help</code> يعرض قائمة المحفّزات من القاعدة لهذه المحادثة. عند إنشاء محادثة جديدة يُستورد محتوى مجلد <code>list/</code> تلقائياً كردود لهذه المحادثة.</p>
+
+<div class="card sb-card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>المحفّز</th>
+          <th>النوع</th>
+          <th>مفعّل</th>
+          <th class="text-end">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td><code>{{ r.trigger }}</code></td>
+          <td><span class="badge bg-light text-dark border">{{ r.response_type }}</span></td>
+          <td>
+            {% if r.enabled %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle">نعم</span>
+            {% else %}
+            <span class="badge bg-light text-muted border">لا</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="/chats/{{ chat.chat_id }}/replies/{{ r.id }}/edit" class="btn btn-sm btn-outline-secondary">تعديل</a>
+            <form method="post" action="/chats/{{ chat.chat_id }}/replies/{{ r.id }}/delete" class="d-inline" onsubmit="return confirm('حذف؟');">
+              <button type="submit" class="btn btn-sm btn-outline-danger">حذف</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">
+          <div class="sb-empty">
+            <strong>لا توجد ردود لهذه المحادثة.</strong>
+            أضف محفّزاً (كلمة) ورداً نصياً أو صورة.
+          </div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

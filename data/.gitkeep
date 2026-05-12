@@ -1,0 +1,1 @@
+# Keep data/ in git; DB and bot.pid are ignored.

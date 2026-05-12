@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{% if chat %}تعديل{% else %}إضافة{% endif %} محادثة — SaherBot{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+  <h1 class="sb-page-title h4 mb-0">{% if chat %}تعديل محادثة{% else %}إضافة محادثة{% endif %}</h1>
+  {% if chat and chat.bot_id %}
+  <a href="/bots/{{ chat.bot_id }}/edit" class="btn btn-outline-primary btn-sm">تعديل البوت المرتبط</a>
+  {% endif %}
+</div>
+{% if chat %}{% include "partials/chat_toolbar.html" %}{% endif %}
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+<form method="post" action="{% if chat %}/chats/{{ chat.chat_id }}/edit{% else %}/chats/new{% endif %}" class="card sb-card card-body" style="max-width: 30rem;">
+  {% if chat %}
+  <div class="mb-3">
+    <label class="form-label">معرف المحادثة (رقم المجموعة)</label>
+    <input type="text" name="new_chat_id" class="form-control font-monospace" dir="ltr" inputmode="numeric" value="{{ chat.chat_id }}" required>
+    <div class="form-text">يمكنك تصحيح المعرف؛ تُحدَّث الردود التلقائية والكلمات الممنوعة والأحداث المرتبطة تلقائياً. يُقبل الشكل <code dir="ltr">-100…</code> أو نفس الأرقام بدون سالب (مثل <code dir="ltr">1001845637233</code>).</div>
+  </div>
+  {% else %}
+  <div class="mb-3">
+    <label class="form-label">معرف المحادثة (رقم المجموعة)</label>
+    <input type="text" name="chat_id" class="form-control" required placeholder="-1001845637233">
+    <div class="form-text">من أمر <code>/id</code> في المجموعة. يُقبل سالباً أو كرقم يبدأ بـ <code dir="ltr">100…</code> بدون سالب.</div>
+  </div>
+  {% endif %}
+  <div class="mb-3">
+    <label class="form-label">البوت المسؤول</label>
+    <select name="bot_id" class="form-select">
+      <option value="">— بدون —</option>
+      {% for b in bots|default([]) %}
+      <option value="{{ b.id }}" {% if chat and chat.bot_id == b.id %}selected{% endif %}>#{{ b.id }} {{ b.name or 'بوت' }}</option>
+      {% endfor %}
+    </select>
+    <div class="form-text">عند تفعيل المراقبة يجب اختيار البوت الذي يملك التوكن المضاف لهذه المجموعة.</div>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">عنوان (اختياري)</label>
+    <input type="text" name="title" class="form-control" value="{{ chat.title if chat else '' }}">
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" name="moderation_enabled" value="1" id="mod" {% if not chat or chat.moderation_enabled %}checked{% endif %}>
+    <label class="form-check-label" for="mod">تفعيل المراقبة (الإشراف)</label>
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" name="moderation_apply_to_admins" value="1" id="mod_admins" {% if chat and chat.moderation_apply_to_admins %}checked{% endif %}>
+    <label class="form-check-label" for="mod_admins">تطبيق الإشراف على المشرفين (معاملتهم كالأعضاء)</label>
+    <div class="form-text">عند التفعيل: حد الطول، أنواع الرسائل، المشاركات المحظورة، والكلمات الممنوعة تُطبَّق على مدراء المجموعة أيضاً (مع العدّ نحو الحظر/الطرد عند التكرار).</div>
+  </div>
+  <p class="small text-secondary fw-semibold mb-2">منع المحتوى في الرسائل (نص أو تعليق)</p>
+  <div class="form-check mb-2">
+    <input class="form-check-input" type="checkbox" name="moderation_block_phones" value="1" id="blk_phone" {% if not chat or chat.moderation_block_phones %}checked{% endif %}>
+    <label class="form-check-label" for="blk_phone">منع أرقام الجوال</label>
+  </div>
+  <div class="form-check mb-2">
+    <input class="form-check-input" type="checkbox" name="moderation_block_mentions" value="1" id="blk_mention" {% if not chat or chat.moderation_block_mentions %}checked{% endif %}>
+    <label class="form-check-label" for="blk_mention">منع تاق المستخدمين (<code>@username</code> ومنشن تيليجرام)</label>
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" name="moderation_block_links" value="1" id="blk_link" {% if not chat or chat.moderation_block_links %}checked{% endif %}>
+    <label class="form-check-label" for="blk_link">منع الروابط</label>
+    <div class="form-text">يشمل الروابط في النص (مثل <code dir="ltr">https://…</code> و<code dir="ltr">www.…</code>) وروابط <code dir="ltr">t.me</code>، وكيانات الرابط في تيليجرام (<code dir="ltr">url</code> و<code dir="ltr">text_link</code>).</div>
+  </div>
+  {% set ct_allowed = chat.allowed_content_types if chat and chat.allowed_content_types else (default_allowed_content_types|default(['audio', 'photo', 'voice', 'video', 'text'])) %}
+  <p class="small text-secondary fw-semibold mb-2">أنواع الرسائل المسموحة</p>
+  <p class="form-text small mb-2">عند تفعيل المراقبة يُحذف ما عدا الأنواع المحددة (مع رسالة تنبيه للعضو).</p>
+  <div class="row g-2 mb-3">
+    <div class="col-6 col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_audio" value="1" id="ct_audio" {% if 'audio' in ct_allowed %}checked{% endif %}><label class="form-check-label" for="ct_audio">صوت</label></div></div>
+    <div class="col-6 col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_photo" value="1" id="ct_photo" {% if 'photo' in ct_allowed %}checked{% endif %}><label class="form-check-label" for="ct_photo">صورة</label></div></div>
+    <div class="col-6 col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_voice" value="1" id="ct_voice" {% if 'voice' in ct_allowed %}checked{% endif %}><label class="form-check-label" for="ct_voice">رسالة صوتية</label></div></div>
+    <div class="col-6 col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_video" value="1" id="ct_video" {% if 'video' in ct_allowed %}checked{% endif %}><label class="form-check-label" for="ct_video">فيديو</label></div></div>
+    <div class="col-6 col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_text" value="1" id="ct_text" {% if 'text' in ct_allowed %}checked{% endif %}><label class="form-check-label" for="ct_text">نص</label></div></div>
+    <div class="col-6 col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_document" value="1" id="ct_document" {% if 'document' in ct_allowed %}checked{% endif %}><label class="form-check-label" for="ct_document">ملف</label></div></div>
+    <div class="col-6 col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_sticker" value="1" id="ct_sticker" {% if 'sticker' in ct_allowed %}checked{% endif %}><label class="form-check-label" for="ct_sticker">ملصق</label></div></div>
+    <div class="col-6 col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_location" value="1" id="ct_location" {% if 'location' in ct_allowed %}checked{% endif %}><label class="form-check-label" for="ct_location">موقع</label></div></div>
+    <div class="col-6 col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="allow_ct_contact" value="1" id="ct_contact" {% if 'contact' in ct_allowed %}checked{% endif %}><label class="form-check-label" for="ct_contact">جهة اتصال</label></div></div>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">حد طول الرسالة (لهذه المحادثة فقط)</label>
+    <input type="text" name="msg_max_length" class="form-control" value="{{ chat.msg_max_length if chat and chat.msg_max_length is not none else '' }}" placeholder="فارغ = 300">
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" name="msg_length_unlimited" value="1" id="unlimited" {% if chat and chat.msg_length_unlimited %}checked{% endif %}>
+    <label class="form-check-label" for="unlimited">تعطيل حد الطول لهذه المحادثة</label>
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" name="echo_enabled" value="1" id="echo" {% if chat and chat.echo_enabled %}checked{% endif %}>
+    <label class="form-check-label" for="echo">تفعيل echo لهذه المحادثة</label>
+  </div>
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    <button type="submit" class="btn btn-primary">حفظ</button>
+    <a href="/chats" class="btn btn-outline-secondary">العودة لقائمة المحادثات</a>
+  </div>
+</form>
+{% endblock %}
+

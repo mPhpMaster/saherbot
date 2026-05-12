@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}البوتات — SaherBot{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <div>
+    <h1 class="sb-page-title h3 mb-1">البوتات</h1>
+    <p class="text-muted small mb-0">كل بوت له توكن من BotFather. اربط المحادثات من <a href="/chats">المحادثات</a>. أعد تشغيل البوت من الرئيسية بعد تغيير التوكن.</p>
+  </div>
+  <a href="/bots/new" class="btn btn-primary btn-sm">إضافة بوت</a>
+</div>
+
+<div class="card sb-card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>الاسم</th>
+          <th>التوكن</th>
+          <th>محادثات مرتبطة</th>
+          <th class="text-end">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bots %}
+        <tr>
+          <td>{{ b.id }}</td>
+          <td>{{ b.name or '—' }}</td>
+          <td class="small">
+            {% if b.bot_token %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle">محفوظ</span>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>{{ chat_counts.get(b.id, 0) }}</td>
+          <td class="text-end">
+            <a href="/bots/{{ b.id }}/edit" class="btn btn-sm btn-outline-primary">تعديل / المحادثات</a>
+            <form method="post" action="/bots/{{ b.id }}/delete" class="d-inline" onsubmit="return confirm('حذف البوت وفك ربط جميع المحادثات؟');">
+              <button type="submit" class="btn btn-sm btn-outline-danger">حذف</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">
+          <div class="sb-empty">
+            <strong>لا يوجد بوت بعد.</strong>
+            أضف بوتاً وضع توكن BotFather لربط محادثات لاحقاً.
+          </div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

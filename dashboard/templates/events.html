@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}الأحداث — SaherBot{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <div>
+    <h1 class="sb-page-title h4 mb-1">سجل الأحداث</h1>
+    <p class="text-muted small mb-0">يتم التصفية على نفس الصفحة. آخر 100 حدث وفق الفلتر الحالي.</p>
+  </div>
+  <div class="d-flex gap-2">
+    {% if selected_type or chat_id_field_value %}
+    <a href="/events" class="btn btn-outline-secondary btn-sm">إعادة الضبط</a>
+    {% endif %}
+    <a href="/" class="btn btn-link btn-sm">← الرئيسية</a>
+  </div>
+</div>
+
+<form method="get" action="/events" class="card sb-card card-body mb-3" id="sb-events-filter">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-5">
+      <label class="form-label small mb-1">نوع الحدث</label>
+      <select name="event_type" class="form-select" data-sb-filter="event_type">
+        <option value="">كل الأنواع</option>
+        {% for t in event_types %}
+        <option value="{{ t }}" {% if selected_type == t %}selected{% endif %}>{{ event_type_label_ar(t) }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-5">
+      <label class="form-label small mb-1">معرف المحادثة (اختياري)</label>
+      <input type="text" name="chat_id" class="form-control" value="{{ chat_id_field_value }}" placeholder="-100..." data-sb-filter="chat_id" inputmode="numeric">
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary w-100">تصفية</button>
+    </div>
+  </div>
+</form>
+
+<div class="card sb-card border-warning mb-3">
+  <div class="card-body py-3">
+    <h2 class="h6 mb-2">صيانة السجل والأحداث</h2>
+    <p class="text-muted small mb-3 mb-md-2">إجراءات لا يمكن التراجع عنها. تُنفَّذ فقط من جلسة لوحة التحكم.</p>
+    <div class="d-flex flex-wrap gap-2">
+      <form method="post" action="/events/clear-logs" class="d-inline m-0" onsubmit="return confirm('هل أنت متأكد من تفريغ جميع ملفات السجل في مجلد logs؟ لا يمكن التراجع عن هذا الإجراء.');">
+        <button type="submit" class="btn btn-outline-danger btn-sm">تفريغ ملفات اللوق</button>
+      </form>
+      <form method="post" action="/events/clear-events" class="d-inline m-0" onsubmit="return confirm('هل أنت متأكد من حذف جميع الأحداث من قاعدة البيانات؟ لا يمكن التراجع عن هذا الإجراء.');">
+        <button type="submit" class="btn btn-outline-danger btn-sm">تفريغ جدول الأحداث</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% for sec in log_sections %}
+<details class="card sb-card mb-3 sb-log-tail-details" open>
+  <summary class="card-header py-2 sb-log-tail-summary" style="cursor: pointer;">
+    {% if sec.id == 'today' %}
+    <span class="fw-semibold">سجل التشغيل (اليوم)</span>
+    {% else %}
+    <span class="fw-semibold">تشغيل البوت (bot-spawn)</span>
+    {% endif %}
+    <span class="text-muted small ms-2">— آخر {{ sec.lines|length }} / {{ log_tail_max }} · <code class="small" dir="ltr">logs/{{ sec.filename }}</code></span>
+  </summary>
+  <div class="border-top sb-log-tail-body" style="max-height: 22rem; overflow: auto;">
+    {% if sec.lines %}
+    <pre class="mb-0 p-3 small sb-log-tail-pre" dir="ltr" style="white-space: pre-wrap; word-break: break-word; text-align: left; unicode-bidi: plaintext;">{% for line in sec.lines %}{{ line }}
+{% endfor %}</pre>
+    {% else %}
+    <p class="text-muted small mb-0 p-3">لا توجد سطور بعد في هذا الملف أو الملف غير موجود. يُكتب اللوق إلى <code dir="ltr">logs/{{ sec.filename }}</code> عند التشغيل المناسب.</p>
+    {% endif %}
+  </div>
+</details>
+{% endfor %}
+
+<div class="card sb-card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0" id="sb-events-table">
+      <thead class="table-light">
+        <tr>
+          <th>#</th>
+          <th>الوقت</th>
+          <th>المحادثة</th>
+          <th>النوع</th>
+          <th>بيانات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in rows %}
+        <tr data-event-type="{{ e.event_type }}" data-chat-id="{{ e.chat_id or '' }}">
+          <td>{{ e.id }}</td>
+          <td class="text-nowrap small">{{ e.ts }}</td>
+          <td>{{ e.chat_id if e.chat_id is not none else "—" }}</td>
+          <td class="small">{{ event_type_label_ar(e.event_type) }}</td>
+          <td class="small text-break"><code>{{ e.meta_json or {} }}</code></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted py-4">لا توجد أحداث مطابقة للمرشّحات الحالية.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+(function () {
+  var form = document.getElementById('sb-events-filter');
+  var table = document.getElementById('sb-events-table');
+  if (!form || !table) return;
+  var typeSel = form.querySelector('[data-sb-filter="event_type"]');
+  var chatInp = form.querySelector('[data-sb-filter="chat_id"]');
+  var tbody = table.tBodies[0];
+  var dataRows = tbody ? tbody.querySelectorAll('tr[data-event-type]') : [];
+  if (!dataRows.length) return;
+
+  function applyInPlace() {
+    var t = (typeSel && typeSel.value ? typeSel.value : '').trim().toLowerCase();
+    var c = (chatInp && chatInp.value != null ? String(chatInp.value) : '').trim();
+    var visible = 0;
+    dataRows.forEach(function (row) {
+      var rt = (row.getAttribute('data-event-type') || '').toLowerCase();
+      var rc = row.getAttribute('data-chat-id') || '';
+      var chatOk = !c || rc === c || rc.indexOf(c) !== -1;
+      var ok = (!t || rt === t) && chatOk;
+      row.style.display = ok ? '' : 'none';
+      if (ok) visible++;
+    });
+    var jsEmpty = tbody.querySelector('tr.sb-empty-jsfilter');
+    if (!visible) {
+      if (!jsEmpty) {
+        jsEmpty = document.createElement('tr');
+        jsEmpty.className = 'sb-empty-jsfilter';
+        jsEmpty.innerHTML = '<td colspan="5" class="text-center text-muted py-3">لا توجد نتائج للمرشّح ضمن الصفحة الحالية. اضغط «تصفية» لجلب المزيد من القاعدة.</td>';
+        tbody.appendChild(jsEmpty);
+      }
+    } else if (jsEmpty) {
+      jsEmpty.remove();
+    }
+  }
+
+  if (typeSel) typeSel.addEventListener('change', applyInPlace);
+  if (chatInp) {
+    chatInp.addEventListener('input', applyInPlace);
+    chatInp.addEventListener('change', applyInPlace);
+  }
+})();
+
+(function () {
+  function scrollLogTailsToBottom() {
+    document.querySelectorAll('.sb-log-tail-body').forEach(function (el) {
+      el.scrollTop = el.scrollHeight;
+    });
+  }
+  scrollLogTailsToBottom();
+  requestAnimationFrame(scrollLogTailsToBottom);
+  setTimeout(scrollLogTailsToBottom, 50);
+})();
+</script>
+{% endblock %}
