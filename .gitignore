@@ -165,3 +165,4 @@ data/bot.pid
 data/dashboard.pid
 data/backups/
 .uninstall_backup_keep
+.env.old
