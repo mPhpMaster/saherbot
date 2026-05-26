@@ -1,9 +1,23 @@
-from logger import log
+# Standard library imports
+import signal
+import sys
+
+# Third-party imports
 import telebot
+
+# Local imports
 import loader
-bot = telebot.TeleBot(loader.BOT_TOKEN)
-import logger
+from logger import log
 import helpers
+
+# Initialize bot instance
+bot = telebot.TeleBot(loader.BOT_TOKEN)
+
+# Set bot instance in helpers to avoid circular imports
+helpers.set_bot(bot)
+
+# Import logger after bot initialization
+import logger
 
 
 @bot.message_handler(commands=["id"])
@@ -125,10 +139,26 @@ helpers.load_lists()
 if int(loader.NOTIFY_RUN) == 1:
     helpers.welcome_message(loader.CHAT_ID)
 
+def signal_handler(signum, frame):
+    """Handle shutdown signals gracefully."""
+    logger.log(f"Received signal {signum}, shutting down gracefully...")
+    try:
+        bot.stop_polling()
+    except Exception:
+        pass
+    sys.exit(0)
+
+
 def startBot():
+    """Start the bot with graceful shutdown handling."""
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
     logger.log(loader.botName + " Running!")
-    logger.log("Ctrl+C to close it.")
-    # infinity_polling: survives Telegram 5xx (e.g. 502 Bad Gateway) and network blips; plain polling() exits on first API error.
+    logger.log("Press Ctrl+C to stop.")
+    
+    # infinity_polling: survives Telegram 5xx (e.g. 502 Bad Gateway) and network blips
     try:
         bot.infinity_polling(
             skip_pending=True,
@@ -137,6 +167,8 @@ def startBot():
         )
     except KeyboardInterrupt:
         logger.log("Exit (KeyboardInterrupt)!")
+    except Exception as e:
+        logger.log(f"Polling error: {e}", "error")
     finally:
         try:
             bot.stop_polling()
